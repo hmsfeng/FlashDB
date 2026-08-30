@@ -1,21 +1,7 @@
 /*
- * File      : fal_def.h
- * This file is part of FAL (Flash Abstraction Layer) package
- * COPYRIGHT (C) 2006 - 2019, RT-Thread Development Team
+ * Copyright (c) 2006-2018, RT-Thread Development Team
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Change Logs:
  * Date           Author       Notes
@@ -27,8 +13,20 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#ifdef FDB_USING_NATIVE_ASSERT
+#include <assert.h>
+#endif
 
-#define FAL_SW_VERSION                 "0.5.0"
+#define FAL_SW_VERSION                 "0.5.99"
+
+#ifdef __RTTHREAD__ /* for RT-Thread platform */
+#include <rtthread.h>
+#define FAL_PRINTF      rt_kprintf
+#define FAL_MALLOC      rt_malloc
+#define FAL_CALLOC      rt_calloc
+#define FAL_REALLOC     rt_realloc
+#define FAL_FREE        rt_free
+#endif
 
 #ifndef FAL_MALLOC
 #define FAL_MALLOC                     malloc
@@ -46,43 +44,42 @@
 #define FAL_FREE                       free
 #endif
 
+#ifndef FAL_PRINTF
+#define FAL_PRINTF                     printf
+#endif
+
 #ifndef FAL_DEBUG
 #define FAL_DEBUG                      0
 #endif
 
-#ifndef FAL_PRINTF
-#ifdef RT_VER_NUM
-/* for RT-Thread platform */
-extern void rt_kprintf(const char *fmt, ...);
-#define FAL_PRINTF rt_kprintf
-#else
-#define FAL_PRINTF printf
-#endif /* RT_VER_NUM */
-#endif /* FAL_PRINTF */
-
 #if FAL_DEBUG
+#ifndef FDB_USING_NATIVE_ASSERT
 #ifdef assert
 #undef assert
 #endif
 #define assert(EXPR)                                                           \
 if (!(EXPR))                                                                   \
 {                                                                              \
-    FAL_PRINTF("(%s) has assert failed at %s.\n", #EXPR, __FUNCTION__);        \
+    FAL_PRINTF("(%s) has assert failed at %s.\n", #EXPR, __func__ );        \
     while (1);                                                                 \
 }
+#endif
 
 /* debug level log */
 #ifdef  log_d
 #undef  log_d
 #endif
-#define log_d(...)                     FAL_PRINTF("[D/FAL] (%s:%d) ", __FUNCTION__, __LINE__);           FAL_PRINTF(__VA_ARGS__);FAL_PRINTF("\n")
+#include <inttypes.h>
+#define log_d(...)                     FAL_PRINTF("[D/FAL] (%s:%" PRIdLEAST16 ") ", __func__, __LINE__);           FAL_PRINTF(__VA_ARGS__);FAL_PRINTF("\n")
 
 #else
 
+#ifndef FDB_USING_NATIVE_ASSERT
 #ifdef assert
 #undef assert
 #endif
 #define assert(EXPR)                   ((void)0);
+#endif
 
 /* debug level log */
 #ifdef  log_d
@@ -95,7 +92,7 @@ if (!(EXPR))                                                                   \
 #ifdef  log_e
 #undef  log_e
 #endif
-#define log_e(...)                     FAL_PRINTF("\033[31;22m[E/FAL] (%s:%d) ", __FUNCTION__, __LINE__);FAL_PRINTF(__VA_ARGS__);FAL_PRINTF("\033[0m\n")
+#define log_e(...)                     FAL_PRINTF("\033[31;22m[E/FAL] (%s:%d) ", __func__, __LINE__);FAL_PRINTF(__VA_ARGS__);FAL_PRINTF("\033[0m\n")
 
 /* info level log */
 #ifdef  log_i
@@ -127,7 +124,7 @@ struct fal_flash_dev
     } ops;
 
     /* write minimum granularity, unit: bit. 
-       1(nor flash)/ 8(stm32f4)/ 32(stm32f1)/ 64(stm32l4)
+       1(nor flash)/ 8(stm32f2/f4)/ 32(stm32f1)/ 64(stm32l4)
        0 will not take effect. */
     size_t write_gran;
 };
